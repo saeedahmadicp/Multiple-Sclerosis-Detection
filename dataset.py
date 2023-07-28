@@ -3,6 +3,7 @@ import os
 import nibabel as nib
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
+import pandas as pd
 
 import torch
 from torch.utils.data import Dataset
@@ -15,6 +16,10 @@ class MultipleSclerosisDataset(Dataset): # Dataset class
         self.modality = modality
         self.transform = transform
         self.target_transform = target_transform
+        
+        ## suplementary data
+        self.supplementory_data = preprocess_supplementory_data(dataset_dir)
+        
         
         # samples list
         self.samples = data_dict[f'{data_type}_samples']
@@ -46,7 +51,10 @@ class MultipleSclerosisDataset(Dataset): # Dataset class
         ## change the data type of mask to long
         mask = mask.long()
         
-        return volume, mask
+        ## supplementory data dictionary for the current sample
+        supplementory_data_dict = self.supplementory_data[int(sample)]
+        
+        return volume, mask, supplementory_data_dict
         
 ## function for reshaping the 3D data
 class reshape_3d(torch.nn.Module):   
@@ -101,7 +109,53 @@ def spliting_data_5_folds(dataset_dir):
         })
 
     return folds_data
+
+def map_target_values_to_labels(values, dataset_dir):
+    labels = []
+    patients_info = pd.read_excel(os.path.join(dataset_dir, 'Supplementary Table 1 for patient info .xlsx'), header=1)
     
+    columns_PI = patients_info.columns
+    labels = patients_info[columns_PI[-20:]]
+    
+    map_dict = {}
+    for i in range(len(labels.columns)):
+        map_dict[labels.columns[i]] = values[i]
+    return map_dict
+
+def preprocess_supplementory_data(dataset_dir):
+    patients_info = pd.read_excel(os.path.join(dataset_dir, 'Supplementary Table 1 for patient info .xlsx'), header=1)
+    
+    columns_PI = patients_info.columns
+    
+    ## target labels, last 20 columns, drop these columns from the dataframe
+    target = patients_info[columns_PI[-20:]]
+    patients_info.drop(columns=columns_PI[-20:], inplace=True)
+    
+    ## label encoding for gender column 
+    patients_info[columns_PI[1]] = patients_info[columns_PI[1]].map({'F': 0, 'M': 1})
+    ## label encoding for 6th column, Yes: 1, No: 0, question: Does the time difference between MIR aquisition and EDSS < two months?
+    patients_info[columns_PI[5]] = patients_info[columns_PI[5]].map({'Yes': 1, 'No': 0})
+    ## label encoding for 9th column, Yes: 1, No: 0, question: Does the patient has co-moroidity?
+    patients_info[columns_PI[8]] = patients_info[columns_PI[8]].map({'Yes': 1, 'No': 0})
+    
+    ## one-hot encoding for 7th and 8th columns
+    patients_info = pd.get_dummies(patients_info, columns=[columns_PI[6], columns_PI[7]])
+    
+    supplementory_data =  []
+    
+    for sample in range(len(patients_info)):
+        sample_dict = {}
+        # for each sample, get three keys, patient_id, target, and features
+        sample_dict['patient_id'] = patients_info[columns_PI[0]][sample]
+        sample_dict['target'] = target.iloc[sample].values
+        ## all features except the patient_id
+        sample_dict['features'] = patients_info.iloc[sample].values[1:]
+        supplementory_data.append(sample_dict)
+        
+    return supplementory_data
+    
+    
+
 if __name__ == '__main__':
     path = 'Dataset'
     
@@ -110,13 +164,16 @@ if __name__ == '__main__':
     general_transforms = t.Compose([reshape_volume])
     
     data_dict = spliting_data_5_folds(path)
+    sp_data = preprocess_supplementory_data(path)
+
+    
     ds = MultipleSclerosisDataset(path, data_dict[0], 'train', transform=general_transforms, target_transform=general_transforms)
     
-    x, y = ds[0]
+    x, y, sp_data = ds[0]
     print(x.shape, y.shape)
-    print(x.max(), x.min())
-    print(y.max(), y.min())
-    visualize_data(x, 16)
+    print(sp_data)
+   
+    
    
     
 
