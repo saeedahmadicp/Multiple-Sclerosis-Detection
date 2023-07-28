@@ -157,7 +157,7 @@ def preprocess_supplementory_data(dataset_dir):
     
 
 if __name__ == '__main__':
-    path = 'Dataset'
+    path = 'MS_Dataset'
     
     reshape = reshape_3d(128,128,16)
     def reshape_volume(x): return reshape(x)
