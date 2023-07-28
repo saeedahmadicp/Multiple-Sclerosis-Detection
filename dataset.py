@@ -1,8 +1,13 @@
 import os
-from torch.utils.data import Dataset
+
 import nibabel as nib
 import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
 
+import torch
+from torch.utils.data import Dataset
+from torch.nn.functional import interpolate
+from torchvision import transforms as t
 
 class MultipleSclerosisDataset(Dataset): # Dataset class
     def __init__(self, dataset_dir, data_dict, data_type, modality="FLAIR",transform=None, target_transform=None):
@@ -20,38 +25,100 @@ class MultipleSclerosisDataset(Dataset): # Dataset class
     
     def __getitem__(self, index):
         # load the sample
-        sample = sample.split('-')[1]
+        sample = self.samples[index].split('-')[1]
         # load the image and the mask
         volume = nib.load(os.path.join(self.dataset_dir, f'Patient-{sample}' , f'{sample}-{self.modality}.nii')).get_fdata()
         mask = nib.load(os.path.join(self.dataset_dir, f'Patient-{sample}' , f'{sample}-LesionSeg-{self.modality}.nii')).get_fdata()
         
-        # apply transforms
+        ## converting the data to tensor
+        volume = torch.from_numpy(volume).float()
+        mask = torch.from_numpy(mask).float()
+        
+        ## normalizing the data to max-min 
+        volume = (volume - volume.min()) / (volume.max() - volume.min())
+
+        ## apply transforms
         if self.transform:
             volume = self.transform(volume)
         if self.target_transform:
             mask = self.target_transform(mask)
-            
+        
+        ## change the data type of mask to long
+        mask = mask.long()
+        
         return volume, mask
         
+## function for reshaping the 3D data
+class reshape_3d(torch.nn.Module):   
+    def __init__(self, height, width, depth, mode='nearest'):
+        super(reshape_3d, self).__init__()
+        self.height = height
+        self.width = width
+        self.depth = depth
+        self.mode = mode
+
+    def forward(self, x):
         
+        if len(x.shape) == 4:
+            x = x.unsqueeze(0)
+            x = interpolate(x,size=(self.height, self.width, self.depth), mode=self.mode, )
+            x = x.squeeze(0)
+        else:
+            x = x.unsqueeze(0).unsqueeze(0)
+            x = interpolate(x,size=(self.height, self.width, self.depth), mode=self.mode, )
+            x = x.squeeze(0).squeeze(0)
+        return x
+    
+ 
 ## function for visualizing the data (23 slices) in grid view
 def visualize_data(data, slices, figure_size=(10, 10)):
     plt.figure(figsize=figure_size)
     for i in range(slices):
-        plt.subplot(5, 5, i+1)
+        plt.subplot(4, 4, i+1)
         plt.imshow(data[:, :, i], cmap='gray')
         plt.axis('off')
     plt.show()
+
+def spliting_data_5_folds(dataset_dir):
+   
+    folds_data = []
+    folders = os.listdir(dataset_dir)
     
+    ## filter the folders to get only the patients folders
+    folders = list(filter(lambda x: x.startswith('Patient'), folders))
+
+    kfold = KFold(n_splits=5, shuffle=True, random_state=20)
+
+    indices = kfold.split(folders, folders)
+
+    for train_indices, valid_indices in indices:
+        train_samples = [folders[index] for index in train_indices]
+        valid_samples = [folders[index] for index in valid_indices]
+
+        folds_data.append({
+            "train_samples": train_samples,
+            "valid_samples": valid_samples,
+        })
+
+    return folds_data
     
 if __name__ == '__main__':
     path = 'Dataset'
-    modalities = ['FLAIR', 'T1', 'T2']
-    index = 3
-    data = nib.load(os.path.join(path, f'Patient-{index}' , f'{index}-{modalities[0]}.nii')).get_fdata()
-    slices = data.shape[2]
-    print(data.shape)
-    visualize_data(data, slices)
+    
+    reshape = reshape_3d(128,128,16)
+    def reshape_volume(x): return reshape(x)
+    general_transforms = t.Compose([reshape_volume])
+    
+    data_dict = spliting_data_5_folds(path)
+    ds = MultipleSclerosisDataset(path, data_dict[0], 'train', transform=general_transforms, target_transform=general_transforms)
+    
+    x, y = ds[0]
+    print(x.shape, y.shape)
+    print(x.max(), x.min())
+    print(y.max(), y.min())
+    visualize_data(x, 16)
+   
+    
 
 
 
