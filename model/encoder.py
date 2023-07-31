@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from module import DoubleConv
+from .module import DoubleConv
 
 __all__ = ['Encoder']
 class Encoder(nn.Module):

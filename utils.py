@@ -22,8 +22,8 @@ def dice_loss(true, logits, eps=1e-7):
     """
     num_classes = logits.shape[1]
     if num_classes == 1:
-        true_1_hot = torch.eye(num_classes + 1)[true.squeeze(1)]
-        true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
+        true_1_hot = torch.eye(num_classes + 1)[true.squeeze(1).cpu()]
+        true_1_hot = true_1_hot.permute(0, 4, 1, 2, 3).float()
         true_1_hot_f = true_1_hot[:, 0:1, :, :]
         true_1_hot_s = true_1_hot[:, 1:2, :, :]
         true_1_hot = torch.cat([true_1_hot_s, true_1_hot_f], dim=1)
@@ -42,6 +42,15 @@ def dice_loss(true, logits, eps=1e-7):
     cardinality = torch.sum(probas + true_1_hot, dims)
     dice_loss = (2. * intersection / (cardinality + eps)).mean()
     return (1 - dice_loss)
+
+def dice_coeff(pred, target):
+        smooth = 1.
+        num = pred.size(0)
+        m1 = pred.view(num, -1)  # Flatten
+        m2 = target.view(num, -1)  # Flatten
+        intersection = (m1 * m2).sum()
+
+        return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
 def evaluate(preds, targets):
     """ 
@@ -86,24 +95,25 @@ def dice_coeff(pred, target):
 
         return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
-def check_accuracy(loader, model, device="cuda", threshold=0.5, test=False):
+def check_accuracy(loader, encoder, decoder, device, threshold=0.5, test=False):
     num_correct = 0
     num_pixels = 0
     dice_score = 0
-    model.eval()
+    
+    encoder.eval()
+    decoder.eval()
     if test:
         f1_score, precision, recall, specificity = 0.0, 0.0 , 0.0 , 0.0
 
     with torch.no_grad():
-        for _, (x, y) in enumerate(loader):
+        for _, (x, y, _) in enumerate(loader):
             
-            x = x.to(device)
+            x = x.to(device).unsqueeze(1)
             y = y.to(device) #.unsqueeze(1)
 
-            ## for unet plus plus  
-            preds = torch.sigmoid((model(x)))
-
-            # for unet
+            ## forward pass
+            x1, x2, x3, x4, x5 = encoder(x)
+            preds = decoder(x1, x2, x3, x4, x5)
 
             preds = (preds > threshold).float()
             num_correct += (preds == y).sum()
@@ -152,19 +162,25 @@ def check_accuracy(loader, model, device="cuda", threshold=0.5, test=False):
 def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
     mean_loss = 0.0
         
-    for i, (x, y) in enumerate(train_dl):
-        x = x.to(device)
+    for i, (x, y, _) in enumerate(train_dl):
+        x = x.to(device).unsqueeze(1)
         y = y.to(device)
             
         x1, x2, x3, x4, x5 = encoder(x)
         out = decoder(x1, x2, x3, x4, x5)
             
-        loss = loss_fn(out, y)
+        loss = loss_fn(y, out)
         mean_loss += loss.detach().cpu().item()
             
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        
+        
+        if i % 10 == 0:
+            print(f"Iteration {i+1} of {len(train_dl)}")
+            print(f"Train Loss: {loss:.4f}")
+            print()
             
     return mean_loss / len(train_dl)
 
@@ -174,34 +190,39 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
     test_accuracies = []
     test_dice_scores = []
     
-    best_test_loss = float('inf')
-    best_accuracy = 0.0
+    
+    best_f1_score = 0.0
     
     for epoch in range(epochs):
         print(f"Epoch {epoch+1} of {epochs}")
         train_loss = train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device)
-        test_accuracy, test_dice_score = check_accuracy(test_dl, encoder, decoder, device)
-        test_loss = loss_fn(encoder, decoder, test_dl, device)
+        test_dict = check_accuracy(test_dl, encoder, decoder, device, test=True)
+        
         
         train_losses.append(train_loss)
-        test_losses.append(test_loss)
-        test_accuracies.append(test_accuracy)
-        test_dice_scores.append(test_dice_score)
+        
+        test_f1_score = test_dict['f1_score']
         
         print(f"Train Loss: {train_loss:.4f}")
-        print(f"Test Loss: {test_loss:.4f}")
-        print(f"Test Accuracy: {test_accuracy:.4f}")
-        print(f"Test Dice Score: {test_dice_score:.4f}")
+        print(f"Test F1 Score: {test_dict['f1_score']:.4f}")
+        print(f"Test Precision: {test_dict['precision']:.4f}")
+        print(f"Test Recall: {test_dict['recall']:.4f}")
+        print(f"Test Specificity: {test_dict['specificity']:.4f}")
         print()
         
         ## check if the current model is the best model, if so save it
         os.makedirs('models', exist_ok=True)
-        if test_loss < best_test_loss:
-            best_test_loss = test_loss
+        if test_f1_score > best_f1_score:
+            best_f1_score = test_f1_score
             encoder_path = os.path.join('models', 'encoder.pth')
             decoder_path = os.path.join('models', 'decoder.pth')
             torch.save(encoder.state_dict(), encoder_path)
             torch.save(decoder.state_dict(), decoder_path)
         
-        
-    return train_losses, test_losses, test_accuracies, test_dice_scores
+    
+    history = { 'train_loss': train_losses,
+                'test_loss': test_losses,
+                'test_accuracy': test_accuracies,
+                'test_dice_score': test_dice_scores }
+     
+    return history

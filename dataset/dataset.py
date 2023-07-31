@@ -55,7 +55,7 @@ class MultipleSclerosisDataset(Dataset): # Dataset class
         mask = mask.long()
         
         ## supplementory data dictionary for the current sample
-        supplementory_data_dict = self.supplementory_data[int(sample)]
+        supplementory_data_dict = self.supplementory_data[int(sample)-1]
         
         return volume, mask, supplementory_data_dict
         
