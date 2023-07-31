@@ -5,7 +5,7 @@ from module import DoubleConv
 
 __all__ = ['Encoder']
 class Encoder(nn.Module):
-    def __init__(self, in_channels, out_channels, filters = [32, 64, 128, 256, 512]):
+    def __init__(self, in_channels, filters = [32, 64, 128, 256, 512]):
         super(Encoder, self).__init__() 
         
         self.dconv_down1 = DoubleConv(in_channels, filters[0], stride=1)
