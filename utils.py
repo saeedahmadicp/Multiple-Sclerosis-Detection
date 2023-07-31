@@ -3,45 +3,30 @@ import numpy as np
 
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 
 
-__all__ = ['dice_loss', 'evaluate', 'dice_coeff', 'check_accuracy', 'train_one_epoch', 'Fit']
+__all__ = ['DiceBCELossLogitsLoss', 'evaluate', 'dice_coeff', 'check_accuracy', 'train_one_epoch', 'Fit']
 
-def dice_loss(true, logits, eps=1e-7):
-    """Computes the Sørensen–Dice loss.
-    Note that PyTorch optimizers minimize a loss. In this
-    case, we would like to maximize the dice loss so we
-    return the negated dice loss.
-    Args:
-        true: a tensor of shape [B, 1, H, W, D].
-        logits: a tensor of shape [B, C, H, W, D]. Corresponds to
-            the raw output or logits of the model.
-        eps: added to the denominator for numerical stability.
-    Returns:
-        dice_loss: the Sørensen–Dice loss.
-    """
-    num_classes = logits.shape[1]
-    if num_classes == 1:
-        true_1_hot = torch.eye(num_classes + 1)[true.squeeze(1).cpu()]
-        true_1_hot = true_1_hot.permute(0, 4, 1, 2, 3).float()
-        true_1_hot_f = true_1_hot[:, 0:1, :, :]
-        true_1_hot_s = true_1_hot[:, 1:2, :, :]
-        true_1_hot = torch.cat([true_1_hot_s, true_1_hot_f], dim=1)
-        pos_prob = torch.sigmoid(logits)
-        neg_prob = 1 - pos_prob
-        probas = torch.cat([pos_prob, neg_prob], dim=1)
-    else:
+class DiceBCELossLogitsLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(DiceBCELossLogitsLoss, self).__init__()
 
-        true_1_hot = torch.eye(num_classes)[true.squeeze(1).cpu()]
-        true_1_hot = true_1_hot.permute(0, 4, 1, 2,3).float()
-
-        probas = F.softmax(logits, dim=1)
-    true_1_hot = true_1_hot.type(logits.type())
-    dims = (0,) + tuple(range(2, true.ndimension()))
-    intersection = torch.sum(probas * true_1_hot, dims)
-    cardinality = torch.sum(probas + true_1_hot, dims)
-    dice_loss = (2. * intersection / (cardinality + eps)).mean()
-    return (1 - dice_loss)
+    def forward(self, inputs, targets, smooth=1):
+        
+        #comment out if your model contains a sigmoid or equivalent activation layer
+        inputs = torch.sigmoid(inputs)       
+        
+        #flatten label and prediction tensors
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+        
+        intersection = (inputs * targets).sum()                            
+        dice_loss = 1 - (2.*intersection + smooth)/(inputs.sum() + targets.sum() + smooth)  
+        BCE = F.binary_cross_entropy(inputs, targets, reduction='mean')
+        Dice_BCE = BCE + dice_loss
+        
+        return Dice_BCE
 
 def dice_coeff(pred, target):
         smooth = 1.
@@ -72,10 +57,10 @@ def evaluate(preds, targets):
     false_negatives = torch.sum(confusion_vector == 0).item()
 
     ### precision, recall, f1_score and specificity
-    specificity = true_negatives / (true_negatives + false_positives)
-    precision = true_positives / (true_positives + false_positives)
-    recall = true_positives / (true_positives + false_negatives)
-    f1_score = (2.0 * (recall*precision)) / (recall + precision)
+    specificity = true_negatives / ((true_negatives + false_positives) + 1e-7)
+    precision = true_positives / ((true_positives + false_positives) + 1e-7)
+    recall = true_positives / ((true_positives + false_negatives) + 1e-7)
+    f1_score = (2.0 * (recall*precision)) / ((recall + precision)+ 1e-7)
 
     dict = {
         'specificity': specificity,
