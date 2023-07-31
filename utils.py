@@ -1,9 +1,11 @@
+import os
 import numpy as np
 
 import torch
 import torch.nn.functional as F
 
-__all__ = ['dice_loss', 'evaluate', 'dice_coeff', 'check_accuracy']
+
+__all__ = ['dice_loss', 'evaluate', 'dice_coeff', 'check_accuracy', 'train_one_epoch', 'Fit']
 
 def dice_loss(true, logits, eps=1e-7):
     """Computes the Sørensen–Dice loss.
@@ -145,3 +147,61 @@ def check_accuracy(loader, model, device="cuda", threshold=0.5, test=False):
         print(f"Dice score: {dice_score :.2f}")
     
         return accuracy, dice_score
+    
+    
+def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
+    mean_loss = 0.0
+        
+    for i, (x, y) in enumerate(train_dl):
+        x = x.to(device)
+        y = y.to(device)
+            
+        x1, x2, x3, x4, x5 = encoder(x)
+        out = decoder(x1, x2, x3, x4, x5)
+            
+        loss = loss_fn(out, y)
+        mean_loss += loss.detach().cpu().item()
+            
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+            
+    return mean_loss / len(train_dl)
+
+def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=100):
+    train_losses = []
+    test_losses = []
+    test_accuracies = []
+    test_dice_scores = []
+    
+    best_test_loss = float('inf')
+    best_accuracy = 0.0
+    
+    for epoch in range(epochs):
+        print(f"Epoch {epoch+1} of {epochs}")
+        train_loss = train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device)
+        test_accuracy, test_dice_score = check_accuracy(test_dl, encoder, decoder, device)
+        test_loss = loss_fn(encoder, decoder, test_dl, device)
+        
+        train_losses.append(train_loss)
+        test_losses.append(test_loss)
+        test_accuracies.append(test_accuracy)
+        test_dice_scores.append(test_dice_score)
+        
+        print(f"Train Loss: {train_loss:.4f}")
+        print(f"Test Loss: {test_loss:.4f}")
+        print(f"Test Accuracy: {test_accuracy:.4f}")
+        print(f"Test Dice Score: {test_dice_score:.4f}")
+        print()
+        
+        ## check if the current model is the best model, if so save it
+        os.makedirs('models', exist_ok=True)
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+            encoder_path = os.path.join('models', 'encoder.pth')
+            decoder_path = os.path.join('models', 'decoder.pth')
+            torch.save(encoder.state_dict(), encoder_path)
+            torch.save(decoder.state_dict(), decoder_path)
+        
+        
+    return train_losses, test_losses, test_accuracies, test_dice_scores
