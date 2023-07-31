@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 from torch.nn.functional import interpolate
-from torchvision import transforms as t
+
 
 __all__ = ['MultipleSclerosisDataset', 'reshape_3d', 'visualize_data', 'spliting_data_5_folds', 'map_target_values_to_labels',]
 
@@ -159,22 +159,22 @@ def preprocess_supplementory_data(dataset_dir):
     
     
 
-if __name__ == '__main__':
-    path = 'MS_Dataset'
+# if __name__ == '__main__':
+#     path = 'MS_Dataset'
     
-    reshape = reshape_3d(128,128,16)
-    def reshape_volume(x): return reshape(x)
-    general_transforms = t.Compose([reshape_volume])
+#     reshape = reshape_3d(128,128,16)
+#     def reshape_volume(x): return reshape(x)
+#     general_transforms = t.Compose([reshape_volume])
     
-    data_dict = spliting_data_5_folds(path)
-    sp_data = preprocess_supplementory_data(path)
+#     data_dict = spliting_data_5_folds(path)
+#     sp_data = preprocess_supplementory_data(path)
 
     
-    ds = MultipleSclerosisDataset(path, data_dict[0], 'train', transform=general_transforms, target_transform=general_transforms)
+#     ds = MultipleSclerosisDataset(path, data_dict[0], 'train', transform=general_transforms, target_transform=general_transforms)
     
-    x, y, sp_data = ds[0]
-    print(x.shape, y.shape)
-    print(sp_data)
+#     x, y, sp_data = ds[0]
+#     print(x.shape, y.shape)
+#     print(sp_data)
    
     
    
