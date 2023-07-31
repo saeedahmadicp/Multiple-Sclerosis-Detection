@@ -10,6 +10,9 @@ from torch.utils.data import Dataset
 from torch.nn.functional import interpolate
 from torchvision import transforms as t
 
+__all__ = ['MultipleSclerosisDataset', 'reshape_3d', 'visualize_data', 'spliting_data_5_folds', 'map_target_values_to_labels',]
+
+
 class MultipleSclerosisDataset(Dataset): # Dataset class
     def __init__(self, dataset_dir, data_dict, data_type, modality="FLAIR",transform=None, target_transform=None):
         self.dataset_dir = dataset_dir
