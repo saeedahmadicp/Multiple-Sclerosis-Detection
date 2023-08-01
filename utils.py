@@ -209,7 +209,7 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
         test_f1_score = test_dict['f1_score']
         
         print(f"Train Loss: {train_loss:.4f}")
-        print(f"Test Loss: {test_loss:.4f}")
+        print(f"Test Loss: {test_loss_:.4f}")
         
         print(f"Train Accuracy: {train_accuracy:.2f}")
         print("Test Accuracy: {:.2f}".format(test_dict['accuracy']))
