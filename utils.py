@@ -198,11 +198,11 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
         train_loss = train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device)
         test_dict = check_accuracy(test_dl, encoder, decoder, device, test=True)
         train_accuracy, dice_score = check_accuracy(train_dl, encoder, decoder, device)
-        test_loss = test_loss(test_dl, encoder, decoder, loss_fn, device)
+        test_loss_ = test_loss(test_dl, encoder, decoder, loss_fn, device)
         
         
         train_losses.append(train_loss)
-        test_losses.append(test_loss)
+        test_losses.append(test_loss_)
         test_accuracies.append(test_dict['accuracy'])
         test_dice_scores.append(test_dict['dice_score'])
         
