@@ -20,8 +20,8 @@ LEARNING_RATE = 1e-4
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = 8
 NUM_EPOCHS = 25
-IMAGE_HEIGHT = 128
-IMAGE_WIDTH = 128
+IMAGE_HEIGHT =  256
+IMAGE_WIDTH =   256
 IMAGE_DEPTH = 16
 
 DATASET_DIR = 'MS_Dataset'

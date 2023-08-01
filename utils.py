@@ -169,6 +169,21 @@ def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
             
     return mean_loss / len(train_dl)
 
+def test_loss(loader, encoder, decoder, loss_fn, device):
+    mean_loss = 0.0
+    
+    for i, (x, y, _) in enumerate(loader):
+        x = x.to(device).unsqueeze(1)
+        y = y.to(device)
+        
+        x1, x2, x3, x4, x5 = encoder(x)
+        out = decoder(x1, x2, x3, x4, x5)
+        
+        loss = loss_fn(y, out)
+        mean_loss += loss.detach().cpu().item()
+        
+    return mean_loss / len(loader)
+
 def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=100):
     train_losses = []
     test_losses = []
@@ -182,17 +197,26 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
         print(f"Epoch {epoch+1} of {epochs}")
         train_loss = train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device)
         test_dict = check_accuracy(test_dl, encoder, decoder, device, test=True)
+        train_accuracy, dice_score = check_accuracy(train_dl, encoder, decoder, device)
+        test_loss = test_loss(test_dl, encoder, decoder, loss_fn, device)
         
         
         train_losses.append(train_loss)
+        test_losses.append(test_loss)
+        test_accuracies.append(test_dict['accuracy'])
+        test_dice_scores.append(test_dict['dice_score'])
         
         test_f1_score = test_dict['f1_score']
         
         print(f"Train Loss: {train_loss:.4f}")
-        print(f"Test F1 Score: {test_dict['f1_score']:.4f}")
-        print(f"Test Precision: {test_dict['precision']:.4f}")
-        print(f"Test Recall: {test_dict['recall']:.4f}")
-        print(f"Test Specificity: {test_dict['specificity']:.4f}")
+        print(f"Test Loss: {test_loss:.4f}")
+        
+        print(f"Train Accuracy: {train_accuracy:.2f}")
+        print("Test Accuracy: {:.2f}".format(test_dict['accuracy']))
+        
+        print(f"Train Dice Score: {dice_score:.2f}")
+        print(f'Test Dice Score: {test_dict["dice_score"]:.2f}')
+        
         print()
         
         ## check if the current model is the best model, if so save it
