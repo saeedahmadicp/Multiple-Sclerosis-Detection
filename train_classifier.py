@@ -8,10 +8,9 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-from utils import  check_accuracy, Fit, DiceBCELossLogitsLoss
-from model import Decoder, Encoder
+from model import  Encoder, SclerosisClassifier
 from dataset import reshape_3d, get_train_ds_loader, get_test_ds_loader
-from dataset import visualize_data, spliting_data_5_folds, map_target_values_to_labels
+from dataset import  spliting_data_5_folds
 
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
@@ -47,17 +46,51 @@ def main():
         
         
         ## loss function
-        loss_fn = DiceBCELossLogitsLoss()
+        loss_fn = nn.CrossEntropyLoss()
         
         ## define the model
         encoder = Encoder(in_channels=1, filters=[32, 64, 128, 256, 512]).to(DEVICE)
         
-        x, y, _ = next(iter(train_dl))
-        _, _ , _, _, x5 = encoder(x.to(DEVICE).unsqueeze(1))
+        classifier = SclerosisClassifier(input_channels=512, ouptut_units=20).to(DEVICE)
+        optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
         
-        ## flatten the output of the encoder
-        x5_flatten = x5.view(x5.size(0), -1)
-        print(x5.shape)
+        ## load the encoder weights
+        encoder_weights_path = os.path.join('models', 'encoder.pth')
+        encoder.load_state_dict(torch.load(encoder_weights_path))
+        
+        for param in encoder.parameters():
+            param.requires_grad = False
+            
+        for x, y, sp_data in train_dl:
+            x = x.to(DEVICE).unsqueeze(1)
+            
+            
+            ## get the features from the encoder
+            _, _, _, _, features = encoder(x)
+            
+            ## forward pass
+            sp_features = sp_data['features'].to(DEVICE)
+            sp_target = sp_data['target'].to(DEVICE)
+            outputs = classifier(features, sp_features)
+            
+            ## calculate the loss
+            loss = loss_fn(outputs, torch.argmax(sp_target, dim=1))
+            
+            ## backward pass
+            optimizer.zero_grad()
+            optimizer.step()
+            
+            print(loss.item())
+            
+            ##accuracy
+            accuracy = (torch.argmax(outputs, dim=1) == torch.argmax(sp_target, dim=1)).sum().item() / BATCH_SIZE
+            print(accuracy)
+            
+            ## save the model
+            path = os.path.join('models', 'classifier.pth')
+            torch.save(classifier.state_dict(), path)
+        
+            
         
 
 if __name__ == '__main__':
