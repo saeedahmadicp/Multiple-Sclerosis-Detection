@@ -57,6 +57,7 @@ class MultipleSclerosisDataset(Dataset): # Dataset class
         ## supplementory data dictionary for the current sample
         supplementory_data_dict = self.supplementory_data[int(sample)-1]
         
+        
         return volume, mask, supplementory_data_dict
         
 ## function for reshaping the 3D data
@@ -154,6 +155,11 @@ def preprocess_supplementory_data(dataset_dir):
         ## all features except the patient_id
         sample_dict['features'] = patients_info.iloc[sample].values[1:]
         supplementory_data.append(sample_dict)
+        
+    ## convert the supplementory_data to tensor
+    for sample in supplementory_data:
+        sample['target'] = torch.from_numpy(sample['target']).float()
+        sample['features'] = torch.from_numpy(sample['features']).float()
         
     return supplementory_data
     
