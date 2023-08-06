@@ -69,9 +69,9 @@ def calculate_dice_score(encoder, decoder, loader, device, save_results=False, e
             x1, x2, x3, x4, x5 = encoder(x)
             output = decoder(x1, x2, x3, x4, x5)
             
-            preds = torch.softmax(output)
+            preds = torch.softmax(output, dim=1)
             batch_dict = multiclass_dice_coeff(preds=preds, target=y)
-            dice_dict['mean'] += batch_dict['mean']
+            dice_dict['mean'] += batch_dict
             
     
 
