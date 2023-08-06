@@ -156,7 +156,7 @@ def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
         out = decoder(x1, x2, x3, x4, x5)
             
         loss = loss_fn(y, out)
-        mean_loss += loss.detach().cpu().item()
+        mean_loss += loss
             
         optimizer.zero_grad()
         loss.backward()
@@ -167,21 +167,25 @@ def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
             print(f"Iteration {i+1} of {len(train_dl)}")
             print(f"Train Loss: {loss:.4f}")
             print()
-            
+        
+    mean_loss = mean_loss.detech().cpu().item()
     return mean_loss / len(train_dl)
 
 def test_loss(loader, encoder, decoder, loss_fn, device):
     mean_loss = 0.0
     
-    for i, (x, y, _) in enumerate(loader):
-        x = x.to(device).unsqueeze(1)
-        y = y.to(device)
+    encoder.eval()
+    decoder.eval()
+    with torch.no_grad():
+        for i, (x, y, _) in enumerate(loader):
+            x = x.to(device).unsqueeze(1)
+            y = y.to(device)
         
-        x1, x2, x3, x4, x5 = encoder(x)
-        out = decoder(x1, x2, x3, x4, x5)
+            x1, x2, x3, x4, x5 = encoder(x)
+            out = decoder(x1, x2, x3, x4, x5)
         
-        loss = loss_fn(y, out)
-        mean_loss += loss.detach().cpu().item()
+            loss = loss_fn(y, out)
+            mean_loss += loss.detach().cpu().item()
         
     return mean_loss / len(loader)
 
