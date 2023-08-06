@@ -63,7 +63,7 @@ def calculate_dice_score(encoder, decoder, loader, device, save_results=False, e
     decoder.eval()
     with torch.no_grad():
         for  x, y, _ in loader:
-            x = x.to(device)
+            x = x.to(device).unsqueeze(1)
             y = y.to(device)
   
             x1, x2, x3, x4, x5 = encoder(x)
