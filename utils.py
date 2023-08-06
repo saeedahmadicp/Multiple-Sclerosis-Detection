@@ -99,6 +99,7 @@ def check_accuracy(loader, encoder, decoder, device, threshold=0.5, test=False):
             ## forward pass
             x1, x2, x3, x4, x5 = encoder(x)
             preds = decoder(x1, x2, x3, x4, x5)
+            preds = torch.sigmoid(preds, dim=1)
 
             preds = (preds > threshold).float()
             num_correct += (preds == y).sum()
