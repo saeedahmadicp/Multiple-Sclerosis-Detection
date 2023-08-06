@@ -19,8 +19,7 @@ class SclerosisClassifier(nn.Module):
         self.fc4 = nn.Linear(in_features=128, out_features=self.out_channels)
         
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(p=0.2)
-        self.sigmoid = nn.Sigmoid()
+        self.dropout = nn.Dropout(p=0.15)
         
     def forward(self, x, sp_data):
         
@@ -36,6 +35,5 @@ class SclerosisClassifier(nn.Module):
         x_new = self.dropout(self.relu(self.fc2(x_new)))
         x_new = self.dropout(self.relu(self.fc3(x_new)))
         x_new = self.fc4(x_new)
-        out = self.sigmoid(x_new)
         
-        return out
+        return x_new

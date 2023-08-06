@@ -78,12 +78,16 @@ def main():
             
             ## backward pass
             optimizer.zero_grad()
+            loss.backward()
             optimizer.step()
             
             print(loss.item())
             
-            ##accuracy
-            accuracy = (torch.argmax(outputs, dim=1) == torch.argmax(sp_target, dim=1)).sum().item() / BATCH_SIZE
+            ##culculate the accuracy for 20 classes
+            accuracy = []
+            for class_i in range(20):
+                accuracy.append((torch.argmax(outputs, dim=1) == class_i).sum().item() / len(outputs))
+                
             print(accuracy)
             
             ## save the model
