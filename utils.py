@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
+from eval import dice_coeff, multiclass_dice_coeff, calculate_dice_score
 
 __all__ = ['DiceBCELossLogitsLoss', 'evaluate', 'dice_coeff', 'check_accuracy', 'train_one_epoch', 'Fit']
 
@@ -28,14 +29,14 @@ class DiceBCELossLogitsLoss(nn.Module):
         
         return Dice_BCE
 
-def dice_coeff(pred, target):
-        smooth = 1.
-        num = pred.size(0)
-        m1 = pred.view(num, -1)  # Flatten
-        m2 = target.view(num, -1)  # Flatten
-        intersection = (m1 * m2).sum()
+# def dice_coeff(pred, target):
+#         smooth = 1.
+#         num = pred.size(0)
+#         m1 = pred.view(num, -1)  # Flatten
+#         m2 = target.view(num, -1)  # Flatten
+#         intersection = (m1 * m2).sum()
 
-        return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
+#         return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
 def evaluate(preds, targets):
     """ 
@@ -71,14 +72,7 @@ def evaluate(preds, targets):
 
     return dict
 
-def dice_coeff(pred, target):
-        smooth = 1.
-        num = pred.size(0)
-        m1 = pred.view(num, -1)  # Flatten
-        m2 = target.view(num, -1)  # Flatten
-        intersection = (m1 * m2).sum()
 
-        return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
 def check_accuracy(loader, encoder, decoder, device, threshold=0.5, test=False):
     num_correct = 0
@@ -112,10 +106,6 @@ def check_accuracy(loader, encoder, decoder, device, threshold=0.5, test=False):
                 precision += temp_dict['precision']
                 recall += temp_dict['recall']
                 specificity += temp_dict['specificity']
-
-
-
-        
 
         accuracy = num_correct/num_pixels*100
         dice_score = (dice_score/(len(loader)))*100
@@ -168,7 +158,7 @@ def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
             print(f"Train Loss: {loss:.4f}")
             print()
         
-    mean_loss = mean_loss.detech().cpu().item()
+    mean_loss = mean_loss.detach().cpu().item()
     return mean_loss / len(train_dl)
 
 def test_loss(loader, encoder, decoder, loss_fn, device):
@@ -196,38 +186,44 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
     test_dice_scores = []
     
     
-    best_f1_score = 0.0
+    best_dice_score = 0.0
     
     for epoch in range(epochs):
         print(f"Epoch {epoch+1} of {epochs}")
         train_loss = train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device)
-        test_dict = check_accuracy(test_dl, encoder, decoder, device, test=True)
-        train_accuracy, dice_score = check_accuracy(train_dl, encoder, decoder, device)
+        dice_dict_test = calculate_dice_score(encoder, decoder, test_dl, device)
+        dice_dict_train = calculate_dice_score(encoder, decoder, train_dl, device)
+        
+        print("test dice score: ", dice_dict_test['mean'])
+        print("train dice score: ", dice_dict_train['mean'])
+        #test_dict = check_accuracy(test_dl, encoder, decoder, device, test=True)
+        #train_accuracy, dice_score = check_accuracy(train_dl, encoder, decoder, device)
         test_loss_ = test_loss(test_dl, encoder, decoder, loss_fn, device)
         
         
         train_losses.append(train_loss)
         test_losses.append(test_loss_)
-        test_accuracies.append(test_dict['accuracy'])
-        test_dice_scores.append(test_dict['dice_score'])
+        #test_accuracies.append(test_dict['accuracy'])
+        #test_dice_scores.append(test_dict['dice_score'])
         
-        test_f1_score = test_dict['f1_score']
+        #test_f1_score = test_dict['f1_score']
         
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Test Loss: {test_loss_:.4f}")
         
-        print(f"Train Accuracy: {train_accuracy:.2f}")
-        print("Test Accuracy: {:.2f}".format(test_dict['accuracy']))
+        #print(f"Train Accuracy: {train_accuracy:.2f}")
+       # print("Test Accuracy: {:.2f}".format(test_dict['accuracy']))
         
-        print(f"Train Dice Score: {dice_score:.2f}")
-        print(f'Test Dice Score: {test_dict["dice_score"]:.2f}')
+        print(f"Train Dice Score: {dice_dict_train['mean']:.2f}")
+        print(f'Test Dice Score: {dice_dict_test["mean"]:.2f}')
         
         print()
         
         ## check if the current model is the best model, if so save it
         os.makedirs('models', exist_ok=True)
-        if test_f1_score > best_f1_score:
-            best_f1_score = test_f1_score
+        test_dice_score = dice_dict_test['mean']
+        if test_dice_score > best_dice_score:
+            best_dice_score = test_dice_score
             encoder_path = os.path.join('models', 'encoder.pth')
             decoder_path = os.path.join('models', 'decoder.pth')
             torch.save(encoder.state_dict(), encoder_path)

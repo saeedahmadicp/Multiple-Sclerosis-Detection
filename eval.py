@@ -10,6 +10,7 @@ __all__ = ['dice_coeff', 'multiclass_dice_coeff', 'calculate_dice_score']
 
 def dice_coeff(input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon=1e-6):
     # Average of Dice coefficient for all batches, or for a single mask
+    input = input.squeeze(1)  # B,1,H,W => B,H,W
     assert input.size() == target.size()
     if input.dim() == 2 and reduce_batch_first:
         raise ValueError(f'Dice: asked to reduce batch but got tensor without batch dimension (shape {input.shape})')
@@ -61,7 +62,7 @@ def calculate_dice_score(encoder, decoder, loader, device, save_results=False, e
     encoder.eval()
     decoder.eval()
     with torch.no_grad():
-        for  x, y in loader:
+        for  x, y, _ in loader:
             x = x.to(device)
             y = y.to(device)
   
