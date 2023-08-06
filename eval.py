@@ -52,21 +52,23 @@ def multiclass_dice_coeff(preds: Tensor, target: Tensor, reduce_batch_first: boo
 
 
 
-def calculate_dice_score(model, loader, device, save_results=False, epoch=0):
+def calculate_dice_score(encoder, decoder, loader, device, save_results=False, epoch=0):
     
     dice_dict = {}
     dice_dict['mean'] = 0.0
     
     
-    model.eval()
+    encoder.eval()
+    decoder.eval()
     with torch.no_grad():
         for  x, y in loader:
             x = x.to(device)
             y = y.to(device)
   
-            output = model(x)
+            x1, x2, x3, x4, x5 = encoder(x)
+            output = decoder(x1, x2, x3, x4, x5)
             
-            preds = torch.softmax(output, dim=1)
+            preds = torch.softmax(output)
             batch_dict = multiclass_dice_coeff(preds=preds, target=y)
             dice_dict['mean'] += batch_dict['mean']
             
