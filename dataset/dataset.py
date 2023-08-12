@@ -159,6 +159,9 @@ def preprocess_supplementory_data(dataset_dir):
     ## convert the supplementory_data to tensor
     for sample in supplementory_data:
         sample['target'] = torch.from_numpy(sample['target']).float()
+        
+        ## convert boolean values to 1.0 and 0.0
+        sample['features'] = sample['features'].astype(float)
         sample['features'] = torch.from_numpy(sample['features']).float()
         
     return supplementory_data
