@@ -1,6 +1,6 @@
 # Multiple-Sclerosis-Detection
 
-# Setup
+## Setup
 - Install all the dependencies
   - First, install the torch and cudatoolkit using the below script
     - For Windows/Linux
@@ -20,7 +20,7 @@
   pip install requriements.txt
   ```
 
-# Code Execution
+## Code Execution
 - Execute the script for training the auto-encoder
 ```bash
 python train_auto_encoder.py
