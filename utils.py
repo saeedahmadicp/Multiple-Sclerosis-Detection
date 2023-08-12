@@ -117,7 +117,7 @@ def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
         x1, x2, x3, x4, x5 = encoder(x)
         out = decoder(x1, x2, x3, x4, x5)
             
-        loss = loss_fn(y, out)
+        loss = loss_fn(out.squeeze(1), y)
         mean_loss += loss
             
         optimizer.zero_grad()
@@ -146,7 +146,7 @@ def test_loss(loader, encoder, decoder, loss_fn, device):
             x1, x2, x3, x4, x5 = encoder(x)
             out = decoder(x1, x2, x3, x4, x5)
         
-            loss = loss_fn(y, out)
+            loss = loss_fn(out.squeeze(1), y)
             mean_loss += loss.detach().cpu().item()
         
     return mean_loss / len(loader)
@@ -158,7 +158,7 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
     test_dice_scores = []
     
     
-    best_dice_score = 0.0
+    worst_dice_loss = 100.0
     
     for epoch in range(epochs):
         print(f"Epoch {epoch+1} of {epochs}")
@@ -193,9 +193,8 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
         
         ## check if the current model is the best model, if so save it
         os.makedirs('models', exist_ok=True)
-        test_dice_score = dice_dict_test['mean']
-        if test_dice_score > best_dice_score:
-            best_dice_score = test_dice_score
+        if test_loss_ < worst_dice_loss:
+            worst_dice_loss = test_loss_
             encoder_path = os.path.join('models', 'encoder.pth')
             decoder_path = os.path.join('models', 'decoder.pth')
             torch.save(encoder.state_dict(), encoder_path)

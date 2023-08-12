@@ -17,10 +17,10 @@ from loss import CombinedLoss
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-5
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = 1
-NUM_EPOCHS = 100
+NUM_EPOCHS = 50
 IMAGE_HEIGHT =  256
 IMAGE_WIDTH =   256
 IMAGE_DEPTH = 16

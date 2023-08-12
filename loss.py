@@ -16,8 +16,8 @@ class CombinedLoss(nn.Module):
 
     def forward(self, prediction, target):
         dice_loss = self.dice_loss(prediction, target)
-        bce_loss = self.bce_loss(torch.sigmoid(prediction), target)
-        focal_loss = self.focal_loss(prediction, target)
+        bce_loss = self.bce_loss(torch.sigmoid(prediction), target.float())
+        focal_loss = self.focal_loss(prediction, target.float())
         
         combined_loss = self.alpha * dice_loss + self.beta * bce_loss + self.gamma * focal_loss
         return combined_loss * 1/3
