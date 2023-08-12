@@ -3,14 +3,12 @@
 ## Setup
 - Install all the dependencies
   - First, install the torch and cudatoolkit using the below script
-    - For Windows/Linux
+    - For Windows
      ```bash
-     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
     ```
      
-     - For Mac
-     
-     ```# CUDA is not available on MacOS, please use default package```
+     - For Linux /Mac
     ```bash
       pip3 install torch torchvision torchaudio
     ```
