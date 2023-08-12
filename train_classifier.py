@@ -11,14 +11,14 @@ import torch.optim as optim
 from model import  Encoder, SclerosisClassifier
 from dataset import reshape_3d, get_train_ds_loader, get_test_ds_loader
 from dataset import  spliting_data_5_folds
-
+from classifier_utils import find_class_wise_accuracies
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-5
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = 1
-NUM_EPOCHS = 100
+NUM_EPOCHS = 50
 IMAGE_HEIGHT =  256
 IMAGE_WIDTH =   256
 IMAGE_DEPTH = 16
@@ -60,42 +60,56 @@ def main():
         
         for param in encoder.parameters():
             param.requires_grad = False
+        
+        
+        
+        for epoch in range(NUM_EPOCHS):
             
-        for x, y, sp_data in train_dl:
-            x = x.to(DEVICE).unsqueeze(1)
+            for batch, (x, _, sp_data) in enumerate(train_dl):
+                x = x.to(DEVICE).unsqueeze(1)
             
             
-            ## get the features from the encoder
-            _, _, _, _, features = encoder(x)
+                ## get the features from the encoder
+                _, _, _, _, features = encoder(x)
             
-            ## forward pass
-            sp_features = sp_data['features'].to(DEVICE)
-            sp_target = sp_data['target'].to(DEVICE)
-            outputs = classifier(features, sp_features)
+                ## forward pass
+                sp_features = sp_data['features'].to(DEVICE)
+                sp_target = sp_data['target'].to(DEVICE)
+                outputs = classifier(features, sp_features)
             
-            ## calculate the loss
-            loss = loss_fn(outputs, torch.argmax(sp_target, dim=1))
+                ## calculate the loss
+                loss = loss_fn(outputs, sp_target)
             
-            ## backward pass
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                ## backward pass
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
             
-            print(loss.item())
-            
-            ##culculate the accuracy for 20 classes
-            accuracy = []
-            for class_i in range(20):
-                accuracy.append((torch.argmax(outputs, dim=1) == class_i).sum().item() / len(outputs))
                 
-            print(accuracy)
+            
+                ##culculate the accuracy for 20 classes
+                accuracy = []
+            
+                ## convert the probability to class
+                outputs = torch.round(outputs)
+                
+                if batch % 10 == 0:
+                    ## check the accuracy for each label sperately, muliti-class multi-label
+                    for class_i in range(20):
+                        accuracy.append((outputs[:, class_i] == sp_target[:, class_i]).sum().item())
+                    
+                    print('Epoch: {}/{}, Batch: {}/{}, Loss: {:.4f}, Accuracy: {}'.format(epoch+1, NUM_EPOCHS, batch+1, len(train_dl), loss.item(), np.mean(accuracy)))
+                    #print(np.mean(accuracy))
             
             ## save the model
             path = os.path.join('models', 'classifier.pth')
             torch.save(classifier.state_dict(), path)
         
             
-        
+
+
+
+
 
 if __name__ == '__main__':
     main()
