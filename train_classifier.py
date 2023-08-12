@@ -61,6 +61,8 @@ def main():
         for param in encoder.parameters():
             param.requires_grad = False
         
+        ## best accuracy
+        best_test_accuracy = 0.0
         
         
         for epoch in range(NUM_EPOCHS):
@@ -101,15 +103,21 @@ def main():
                     print('Epoch: {}/{}, Batch: {}/{}, Loss: {:.4f}, Accuracy: {}'.format(epoch+1, NUM_EPOCHS, batch+1, len(train_dl), loss.item(), np.mean(accuracy)))
                     #print(np.mean(accuracy))
             
-            ## save the model
-            path = os.path.join('models', 'classifier.pth')
-            torch.save(classifier.state_dict(), path)
+            ## calculate the accuracy for 20 classes for test data
+            train_accuracy = find_class_wise_accuracies(train_dl, classifier, encoder, DEVICE)
+            test_accuracy = find_class_wise_accuracies(test_dl, classifier, encoder, DEVICE)
+            
+            print('Train Accuracy: {}, Test Accuracy: {}'.format(np.mean(train_accuracy), np.mean(test_accuracy)))
+            
+            if np.mean(test_accuracy) > best_test_accuracy:
+                best_test_accuracy = np.mean(test_accuracy)
+                print('Saving the best model...')
+                ## save the model
+                path = os.path.join('models', 'classifier.pth')
+                torch.save(classifier.state_dict(), path)
+                
         
             
-
-
-
-
 
 if __name__ == '__main__':
     main()
