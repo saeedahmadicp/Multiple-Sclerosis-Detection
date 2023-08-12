@@ -8,27 +8,25 @@ import torch.nn.functional as F
 __all__ = ['dice_coeff', 'multiclass_dice_coeff', 'calculate_dice_score']
 
 
-def dice_coeff(input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon=1e-6):
-    # Average of Dice coefficient for all batches, or for a single mask
-    input = input.squeeze(1)  # B,1,H,W => B,H,W
-    assert input.size() == target.size()
-    if input.dim() == 2 and reduce_batch_first:
-        raise ValueError(f'Dice: asked to reduce batch but got tensor without batch dimension (shape {input.shape})')
+def dice_coeff(prediction, target, epsilon=1e-6):
+    """
+    Calculate the Dice coefficient matrix for binary segmentation pixel volumes.
 
-    if input.dim() == 2 or reduce_batch_first:
-        inter = torch.dot(input.reshape(-1), target.reshape(-1))
-        sets_sum = torch.sum(input) + torch.sum(target)
-        if sets_sum.item() == 0:
-            sets_sum = 2 * inter
+    Args:
+        prediction (torch.Tensor): Binary segmentation prediction volume with shape [B, C, H, W, D].
+        target (torch.Tensor): Binary segmentation target volume with shape [B, C, H, W, D].
+        epsilon (float, optional): Small constant to avoid division by zero. Default is 1e-6.
 
-        return (2 * inter + epsilon) / (sets_sum + epsilon)
-    else:
-        # compute and average metric for each batch element
-        dice = 0
-        for i in range(input.shape[0]):
-            dice += dice_coeff(input[i, ...], target[i, ...])
-        return dice / input.shape[0]
-
+    Returns:
+        torch.Tensor: Dice coefficient matrix with shape [B, C].
+    """
+    intersection = torch.sum(prediction * target, dim=(2, 3, 4))
+    prediction_sum = torch.sum(prediction, dim=(2, 3, 4))
+    target_sum = torch.sum(target, dim=(2, 3, 4))
+    
+    dice_coefficient = (2.0 * intersection + epsilon) / (prediction_sum + target_sum + epsilon)
+    
+    return dice_coefficient
 
 def multiclass_dice_coeff(preds: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon=1e-6):
     # Average of Dice coefficient for all classes
