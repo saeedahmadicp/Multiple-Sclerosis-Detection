@@ -10,4 +10,9 @@ python train_auto_encoder.py
 ```bash
 python train_classifier.py
 ```
-## Still incomplete
+- Execute the below script for evaluating the classifier
+```bash
+python eval_classifier.py
+```
+  
+
