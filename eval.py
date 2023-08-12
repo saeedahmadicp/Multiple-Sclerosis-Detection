@@ -70,10 +70,7 @@ def calculate_dice_score(encoder, decoder, loader, device, save_results=False, e
     
 
     dice_dict['mean'] = dice_dict['mean'].detach().cpu().item()
-    
 
-    print(f"dice mean score: {dice_dict['mean']}")
-  
 
     if save_results:
         if not os.path.exists(f"./results/"):
