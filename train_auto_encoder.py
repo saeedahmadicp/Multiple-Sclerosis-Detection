@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-from utils import  check_accuracy, Fit, DiceBCELossLogitsLoss
+from utils import  check_accuracy, Fit, SoftDiceLossV1
 from model import Decoder, Encoder
 from dataset import reshape_3d, get_train_ds_loader, get_test_ds_loader
 from dataset import visualize_data, spliting_data_5_folds, map_target_values_to_labels
@@ -47,7 +47,7 @@ def main():
         
         
         ## loss function
-        loss_fn = DiceBCELossLogitsLoss()
+        loss_fn = SoftDiceLossV1()
         
         ## define the model
         encoder = Encoder(in_channels=1, filters=[32, 64, 128, 256, 512]).to(DEVICE)

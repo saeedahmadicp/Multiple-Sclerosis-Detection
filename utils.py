@@ -7,16 +7,17 @@ import torch.nn as nn
 
 from eval import dice_coeff, multiclass_dice_coeff, calculate_dice_score
 
-__all__ = ['DiceBCELossLogitsLoss', 'evaluate', 'dice_coeff', 'check_accuracy', 'train_one_epoch', 'Fit']
+__all__ = ['SoftDiceLossV1', 'evaluate', 'dice_coeff', 'check_accuracy', 'train_one_epoch', 'Fit']
 
-class DiceBCELossLogitsLoss(nn.Module):
+
+class DiceBCELoss(nn.Module):
     def __init__(self, weight=None, size_average=True):
-        super(DiceBCELossLogitsLoss, self).__init__()
+        super(DiceBCELoss, self).__init__()
 
     def forward(self, inputs, targets, smooth=1):
         
         #comment out if your model contains a sigmoid or equivalent activation layer
-        inputs = torch.sigmoid(inputs)       
+        inputs = F.sigmoid(inputs)       
         
         #flatten label and prediction tensors
         inputs = inputs.view(-1)
@@ -28,6 +29,31 @@ class DiceBCELossLogitsLoss(nn.Module):
         Dice_BCE = BCE + dice_loss
         
         return Dice_BCE
+    
+class SoftDiceLossV1(nn.Module):
+    '''
+    soft-dice loss, useful in binary segmentation
+    '''
+    def __init__(self,
+                 p=1,
+                 smooth=1):
+        super(SoftDiceLossV1, self).__init__()
+        self.p = p
+        self.smooth = smooth
+
+    def forward(self, logits, labels):
+        '''
+        inputs:
+            logits: tensor of shape (N, H, W, ...)
+            label: tensor of shape(N, H, W, ...)
+        output:
+            loss: tensor of shape(1, )
+        '''
+        probs = torch.sigmoid(logits)
+        numer = (probs * labels).sum() # Union (A or B)
+        denor = (probs.pow(self.p) + labels.pow(self.p)).sum() # A + B
+        loss = 1. - (2 * numer + self.smooth) / (denor + self.smooth)
+        return loss
 
 # def dice_coeff(pred, target):
 #         smooth = 1.

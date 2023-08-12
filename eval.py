@@ -33,24 +33,16 @@ def dice_coeff(input: Tensor, target: Tensor, reduce_batch_first: bool = False, 
 def multiclass_dice_coeff(preds: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon=1e-6):
     # Average of Dice coefficient for all classes
 
-    target = F.one_hot(target, 4).permute(0,4,1,2,3).float()
-    input = F.one_hot(preds.argmax(1), 4).permute(0,4,1,2,3).float()
-
-    input = input[:, 1:, :, :, :]
-    target = target[:, 1:, :, :, :]
-
-    assert input.size() == target.size()
-    dice = 0
-    all_dice_score = []
-    for channel in range(input.shape[1]):
-        classwise_dice = dice_coeff(input[:, channel, ...], target[:, channel, ...], reduce_batch_first, epsilon)
-        all_dice_score.append(classwise_dice)
-        dice += classwise_dice
+    p = 1
+    smooth = 1
+    probs = torch.sigmoid(preds)
+    numer = (probs * target).sum() # Union (A or B)
+    denor = (probs.pow(p) + target.pow(p)).sum() # A + B
+    dice_score = (2 * numer + smooth) / (denor + smooth)
     
-    return  dice
     
-
-
+    return  dice_score
+    
 
 
 def calculate_dice_score(encoder, decoder, loader, device, save_results=False, epoch=0):
@@ -69,8 +61,7 @@ def calculate_dice_score(encoder, decoder, loader, device, save_results=False, e
             x1, x2, x3, x4, x5 = encoder(x)
             output = decoder(x1, x2, x3, x4, x5)
             
-            preds = torch.softmax(output, dim=1)
-            batch_dict = multiclass_dice_coeff(preds=preds, target=y)
+            batch_dict = multiclass_dice_coeff(preds=output, target=y)
             dice_dict['mean'] += batch_dict
             
     
