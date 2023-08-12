@@ -13,10 +13,15 @@ class SclerosisClassifier(nn.Module):
         ## reduce the channels from 512 to 4
         self.conv1 = nn.Conv3d(in_channels=self.in_channels, out_channels=4, kernel_size=1)
         
+        self.bn1 = nn.BatchNorm1d(num_features=1051)
         self.fc1 = nn.Linear(in_features=1051, out_features=512)
+        self.bn2 = nn.BatchNorm1d(num_features=512)
         self.fc2 = nn.Linear(in_features=512, out_features=256)
+        self.bn3 = nn.BatchNorm1d(num_features=256)
         self.fc3 = nn.Linear(in_features=256, out_features=128)
+        self.bn4 = nn.BatchNorm1d(num_features=128)
         self.fc4 = nn.Linear(in_features=128, out_features=self.out_channels)
+        
         
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=0.15)
@@ -32,9 +37,9 @@ class SclerosisClassifier(nn.Module):
         ### concatenate the flatten features with the supplementory data
         x_new = torch.cat((x_flatten, sp_data), dim=1)
         
-        x_new = self.dropout(self.relu(self.fc1(x_new)))
-        x_new = self.dropout(self.relu(self.fc2(x_new)))
-        x_new = self.dropout(self.relu(self.fc3(x_new)))
-        x_new = self.fc4(x_new)
+        x_new = self.dropout(self.relu(self.fc1(self.bn1(x_new))))
+        x_new = self.dropout(self.relu(self.fc2(self.bn2(x_new))))
+        x_new = self.dropout(self.relu(self.fc3(self.bn3(x_new))))
+        x_new = self.fc4(self.bn4(x_new))
         
         return self.sigmoid(x_new)
