@@ -7,62 +7,8 @@ import torch.nn as nn
 
 from eval import dice_coeff, multiclass_dice_coeff, calculate_dice_score
 
-__all__ = ['SoftDiceLossV1', 'evaluate', 'dice_coeff', 'check_accuracy', 'train_one_epoch', 'Fit']
+__all__ = [ 'evaluate', 'check_accuracy', 'train_one_epoch', 'Fit']
 
-
-class DiceBCELoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
-        super(DiceBCELoss, self).__init__()
-
-    def forward(self, inputs, targets, smooth=1):
-        
-        #comment out if your model contains a sigmoid or equivalent activation layer
-        inputs = F.sigmoid(inputs)       
-        
-        #flatten label and prediction tensors
-        inputs = inputs.view(-1)
-        targets = targets.view(-1)
-        
-        intersection = (inputs * targets).sum()                            
-        dice_loss = 1 - (2.*intersection + smooth)/(inputs.sum() + targets.sum() + smooth)  
-        BCE = F.binary_cross_entropy(inputs, targets, reduction='mean')
-        Dice_BCE = BCE + dice_loss
-        
-        return Dice_BCE
-    
-class SoftDiceLossV1(nn.Module):
-    '''
-    soft-dice loss, useful in binary segmentation
-    '''
-    def __init__(self,
-                 p=1,
-                 smooth=1):
-        super(SoftDiceLossV1, self).__init__()
-        self.p = p
-        self.smooth = smooth
-
-    def forward(self, logits, labels):
-        '''
-        inputs:
-            logits: tensor of shape (N, H, W, ...)
-            label: tensor of shape(N, H, W, ...)
-        output:
-            loss: tensor of shape(1, )
-        '''
-        probs = torch.sigmoid(logits)
-        numer = (probs * labels).sum() # Union (A or B)
-        denor = (probs.pow(self.p) + labels.pow(self.p)).sum() # A + B
-        loss = 1. - (2 * numer + self.smooth) / (denor + self.smooth)
-        return loss
-
-# def dice_coeff(pred, target):
-#         smooth = 1.
-#         num = pred.size(0)
-#         m1 = pred.view(num, -1)  # Flatten
-#         m2 = target.view(num, -1)  # Flatten
-#         intersection = (m1 * m2).sum()
-
-#         return (2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
 def evaluate(preds, targets):
     """ 
@@ -179,7 +125,7 @@ def train_one_epoch(train_dl, encoder, decoder, optimizer, loss_fn, device):
         optimizer.step()
         
         
-        if i % 10 == 0:
+        if i % 20 == 0:
             print(f"Iteration {i+1} of {len(train_dl)}")
             print(f"Train Loss: {loss:.4f}")
             print()
@@ -220,8 +166,8 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
         dice_dict_test = calculate_dice_score(encoder, decoder, test_dl, device)
         dice_dict_train = calculate_dice_score(encoder, decoder, train_dl, device)
         
-        print("test dice score: ", dice_dict_test['mean'])
-        print("train dice score: ", dice_dict_train['mean'])
+        #print("test dice score: ", dice_dict_test['mean'])
+        #print("train dice score: ", dice_dict_train['mean'])
         #test_dict = check_accuracy(test_dl, encoder, decoder, device, test=True)
         #train_accuracy, dice_score = check_accuracy(train_dl, encoder, decoder, device)
         test_loss_ = test_loss(test_dl, encoder, decoder, loss_fn, device)
@@ -236,12 +182,12 @@ def Fit(train_dl, test_dl, encoder, decoder, optimizer, loss_fn, device, epochs=
         
         print(f"Train Loss: {train_loss:.4f}")
         print(f"Test Loss: {test_loss_:.4f}")
-        
+        print("**************************************")
         #print(f"Train Accuracy: {train_accuracy:.2f}")
        # print("Test Accuracy: {:.2f}".format(test_dict['accuracy']))
         
-        print(f"Train Dice Score: {dice_dict_train['mean']:.2f}")
-        print(f'Test Dice Score: {dice_dict_test["mean"]:.2f}')
+        #print(f"Train Dice Score: {dice_dict_train['mean']:.2f}")
+        #print(f'Test Dice Score: {dice_dict_test["mean"]:.2f}')
         
         print()
         
