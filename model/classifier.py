@@ -15,16 +15,16 @@ class SclerosisClassifier(nn.Module):
         
         self.ln1 = nn.LayerNorm(normalized_shape=(1051,))
         self.fc1 = nn.Linear(in_features=1051, out_features=512)
-        self.ln2 = nn.LayerNorm(normalized_shape=(512,))
+        #self.ln2 = nn.LayerNorm(normalized_shape=(512,))
         self.fc2 = nn.Linear(in_features=512, out_features=256)
-        self.ln3 = nn.LayerNorm(normalized_shape=(256,))
+        #self.ln3 = nn.LayerNorm(normalized_shape=(256,))
         self.fc3 = nn.Linear(in_features=256, out_features=128)
-        self.ln4 = nn.LayerNorm(normalized_shape=(128,))
+        #self.ln4 = nn.LayerNorm(normalized_shape=(128,))
         self.fc4 = nn.Linear(in_features=128, out_features=self.out_channels)
         
         
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(p=0.15)
+        self.dropout = nn.Dropout(p=0.20)
         self.sigmoid = nn.Sigmoid()
         
     def forward(self, x, sp_data):
@@ -37,9 +37,9 @@ class SclerosisClassifier(nn.Module):
         ### concatenate the flatten features with the supplementory data
         x_new = torch.cat((x_flatten, sp_data), dim=1)
         
-        x_new = self.dropout(self.relu(self.fc1(self.ln1(x_new))))
-        x_new = self.dropout(self.relu(self.fc2(self.ln2(x_new))))
-        x_new = self.dropout(self.relu(self.fc3(self.ln3(x_new))))
-        x_new = self.fc4(self.ln4(x_new))
+        x_new = self.dropout(self.relu(self.fc1(x_new)))
+        x_new = self.dropout(self.relu(self.fc2(x_new)))
+        x_new = self.dropout(self.relu(self.fc3(x_new)))
+        x_new = self.fc4(x_new)
         
         return self.sigmoid(x_new)
