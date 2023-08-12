@@ -46,7 +46,7 @@ def main():
         
         
         ## loss function
-        loss_fn = nn.CrossEntropyLoss()
+        loss_fn = nn.MSELoss()
         
         ## define the model
         encoder = Encoder(in_channels=1, filters=[32, 64, 128, 256, 512]).to(DEVICE)
