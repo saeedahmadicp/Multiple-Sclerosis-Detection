@@ -13,7 +13,7 @@ class SclerosisClassifier(nn.Module):
         ## reduce the channels from 512 to 4
         self.conv1 = nn.Conv3d(in_channels=self.in_channels, out_channels=4, kernel_size=1)
         
-        self.ln1 = nn.LayerNorm(normalized_shape=(1051,))
+        #self.ln1 = nn.LayerNorm(normalized_shape=(1051,))
         self.fc1 = nn.Linear(in_features=1051, out_features=512)
         #self.ln2 = nn.LayerNorm(normalized_shape=(512,))
         self.fc2 = nn.Linear(in_features=512, out_features=256)
@@ -37,7 +37,7 @@ class SclerosisClassifier(nn.Module):
         ### concatenate the flatten features with the supplementory data
         x_new = torch.cat((x_flatten, sp_data), dim=1)
         
-        x_new = self.dropout(self.relu(self.fc1(self.ln1(x_new))))
+        x_new = self.dropout(self.relu(self.fc1(x_new)))
         x_new = self.dropout(self.relu(self.fc2(x_new)))
         x_new = self.dropout(self.relu(self.fc3(x_new)))
         x_new = self.fc4(x_new)
