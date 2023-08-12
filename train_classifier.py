@@ -15,10 +15,10 @@ from classifier_utils import find_class_wise_accuracies
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 5e-4
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = 1
-NUM_EPOCHS = 50
+NUM_EPOCHS = 25
 IMAGE_HEIGHT =  256
 IMAGE_WIDTH =   256
 IMAGE_DEPTH = 16
