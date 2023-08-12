@@ -37,7 +37,7 @@ class SclerosisClassifier(nn.Module):
         ### concatenate the flatten features with the supplementory data
         x_new = torch.cat((x_flatten, sp_data), dim=1)
         
-        x_new = self.dropout(self.relu(self.fc1(x_new)))
+        x_new = self.dropout(self.relu(self.fc1(self.ln1(x_new))))
         x_new = self.dropout(self.relu(self.fc2(x_new)))
         x_new = self.dropout(self.relu(self.fc3(x_new)))
         x_new = self.fc4(x_new)
