@@ -87,7 +87,6 @@ def main():
                 loss.backward()
                 optimizer.step()
             
-                
             
                 ##culculate the accuracy for 20 classes
                 accuracy = []
