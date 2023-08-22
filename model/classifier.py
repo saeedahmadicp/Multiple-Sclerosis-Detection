@@ -11,14 +11,14 @@ class SclerosisClassifier(nn.Module):
         self.out_channels = ouptut_units
         
         ## reduce the channels from 512 to 4
-        self.conv1 = nn.Conv3d(in_channels=self.in_channels, out_channels=4, kernel_size=1)
+        self.conv1 = nn.Conv3d(in_channels=self.in_channels, out_channels=16, kernel_size=1)
         
         #self.ln1 = nn.LayerNorm(normalized_shape=(1051,))
-        self.fc1 = nn.Linear(in_features=1051, out_features=512)
+        self.fc1 = nn.Linear(in_features=4123, out_features=1024)
         #self.ln2 = nn.LayerNorm(normalized_shape=(512,))
-        self.fc2 = nn.Linear(in_features=512, out_features=256)
+        self.fc2 = nn.Linear(in_features=1024, out_features=512)
         #self.ln3 = nn.LayerNorm(normalized_shape=(256,))
-        self.fc3 = nn.Linear(in_features=256, out_features=128)
+        self.fc3 = nn.Linear(in_features=512, out_features=128)
         #self.ln4 = nn.LayerNorm(normalized_shape=(128,))
         self.fc4 = nn.Linear(in_features=128, out_features=self.out_channels)
         
@@ -29,7 +29,7 @@ class SclerosisClassifier(nn.Module):
         
     def forward(self, x, sp_data):
         
-        x = self.conv1(x)
+        x = self.relu(self.conv1(x))
         
         ## flatten the features
         x_flatten = x.view(x.size(0), -1)
