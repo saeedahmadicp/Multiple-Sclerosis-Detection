@@ -83,11 +83,14 @@ class reshape_3d(torch.nn.Module):
     
  
 ## function for visualizing the data (23 slices) in grid view
-def visualize_data(data, slices, figure_size=(10, 10)):
+def visualize_data(data, slices, title, figure_size=(10, 10)):
     plt.figure(figsize=figure_size)
+    
+    ##figure title
+    plt.suptitle('Data Visualization {}'.format(title), fontsize=20)
     for i in range(slices):
         plt.subplot(4, 4, i+1)
-        plt.imshow(data[:, :, i], cmap='gray')
+        plt.imshow(data[:, :, i], cmap='cool')
         plt.axis('off')
     plt.show()
 
