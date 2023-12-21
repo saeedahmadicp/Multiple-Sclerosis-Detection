@@ -14,7 +14,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 LEARNING_RATE = 1e-5
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-BATCH_SIZE = 1
+BATCH_SIZE = 12
 NUM_EPOCHS = 25
 IMAGE_HEIGHT = 256
 IMAGE_WIDTH = 256
@@ -55,9 +55,10 @@ def main():
         encoder_weights_path = os.path.join('models', 'encoder.pth')
         encoder.load_state_dict(torch.load(encoder_weights_path, map_location=torch.device('cpu')))
         
-        for param in encoder.parameters():
-            param.requires_grad = False
-
+         ## load the classifier weights
+        classifier_weights_path = os.path.join('models', 'classifier.pth')
+        classifier.load_state_dict(torch.load(classifier_weights_path, map_location=torch.device('cpu')))
+        
         encoder.eval()
         classifier.eval()
         
@@ -79,6 +80,15 @@ def main():
                 # Convert the probability to class
                 outputs = torch.round(outputs)
                 
+                # threshold = 0.51
+                # outputs[outputs >= threshold] = 1 
+                # outputs[outputs < threshold] = 0
+                
+                
+                ## convert output to numpy and integer then
+                outputs = outputs.cpu().numpy().astype(int)
+                sp_target = sp_target.cpu().numpy().astype(int)
+                
                 # For each binary class
                 for class_i in range(20):
                     # Calculate TP, FP, TN, and FN for each binary class
@@ -92,13 +102,22 @@ def main():
                     confusion_matrices[class_i][0, 1] += FN
                     confusion_matrices[class_i][1, 0] += FP
                     confusion_matrices[class_i][1, 1] += TN
+                    
+                    print(f"Class {class_i}: TP={TP}, FP={FP}, TN={TN}, FN={FN}, Confusion Matrix: {confusion_matrices[class_i]}")
+                    print(f"Confusion Matrix for Class {class_i}:")
+                    plot_confusion_matric(confusion_matrices[class_i], class_i)
+                    
+                    
+                
+                
+                exit()
 
         # Now you have a list of correctly calculated confusion matrices, one for each binary class
         # You can print them or visualize them as desired
-        for class_i, confusion_matrix in enumerate(confusion_matrices):
-            print(f"Confusion Matrix for Class {class_i}:")
-            print(confusion_matrix)
-            plot_confusion_matric(confusion_matrix, class_i)
+        # for class_i, confusion_matrix in enumerate(confusion_matrices):
+        #     print(f"Confusion Matrix for Class {class_i}:")
+        #     print(confusion_matrix)
+        #     plot_confusion_matric(confusion_matrix, class_i)
             
 def plot_confusion_matric(confusion_matric, class_id):
     fig, ax = plt.subplots(figsize=(5, 5))
@@ -109,6 +128,9 @@ def plot_confusion_matric(confusion_matric, class_id):
     plt.xlabel('Predictions', fontsize=18)
     plt.ylabel('Actuals', fontsize=18)
     plt.title(f"Confusion Matrix for Class {class_id}", fontsize=18)
+    
+    ## save the confusion matrix in history folder
+    plt.savefig(os.path.join('history', 'confusion_matrix_{}.png'.format(class_id)))
     plt.show()
 
 if __name__ == '__main__':
